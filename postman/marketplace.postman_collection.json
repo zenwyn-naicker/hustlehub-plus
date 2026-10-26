@@ -1,0 +1,2413 @@
+{
+  "info": {
+    "name": "HustleHub+ Marketplace",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:3443"
+    },
+    {
+      "key": "testPassword",
+      "value": "GuideTest!12345"
+    },
+    {
+      "key": "adminEmail",
+      "value": ""
+    },
+    {
+      "key": "adminPassword",
+      "value": ""
+    },
+    {
+      "key": "invalidToken",
+      "value": "invalid.jwt.token"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.info.requestName === 'Health and security headers') {",
+          "const id = pm.variables.replaceIn('{{$guid}}'); pm.collectionVariables.set('runId', id);",
+          "for (const key of ['client','otherClient','freelancer','otherFreelancer']) pm.collectionVariables.set(key+'Email', key.toLowerCase()+id+'@example.com');",
+          "pm.collectionVariables.set('requestKey', pm.variables.replaceIn('{{$guid}}'));",
+          "pm.collectionVariables.set('secondKey', pm.variables.replaceIn('{{$guid}}'));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health and security headers",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/health",
+        "header": []
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Helmet and CSP', () => { pm.expect(pm.response.headers.get('Content-Security-Policy')).to.include(\"default-src 'none'\"); pm.expect(pm.response.headers.get('Content-Security-Policy')).not.to.include('unsafe-inline'); pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Missing JWT",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": []
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tampered JWT",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{invalidToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Register freelancer",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Test Freelancer\", \"email\": \"{{freelancerEmail}}\", \"password\": \"{{testPassword}}\", \"role\": \"freelancer\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('freelancerId', j.data.user.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login freelancer",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{freelancerEmail}}\", \"password\": \"{{testPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('freelancerToken', j.data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Register otherFreelancer",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Test Freelancer\", \"email\": \"{{otherFreelancerEmail}}\", \"password\": \"{{testPassword}}\", \"role\": \"freelancer\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('otherFreelancerId', j.data.user.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login otherFreelancer",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{otherFreelancerEmail}}\", \"password\": \"{{testPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('otherFreelancerToken', j.data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Register client",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Test Client\", \"email\": \"{{clientEmail}}\", \"password\": \"{{testPassword}}\", \"role\": \"client\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('clientId', j.data.user.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login client",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{clientEmail}}\", \"password\": \"{{testPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('clientToken', j.data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Register otherClient",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Test Client\", \"email\": \"{{otherClientEmail}}\", \"password\": \"{{testPassword}}\", \"role\": \"client\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('otherClientId', j.data.user.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login otherClient",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{otherClientEmail}}\", \"password\": \"{{testPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('otherClientToken', j.data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Duplicate email",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Test Client\", \"email\": \"{{clientEmail}}\", \"password\": \"{{testPassword}}\", \"role\": \"client\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin public registration rejected",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Test Admin\", \"email\": \"admin{{runId}}@example.com\", \"password\": \"{{testPassword}}\", \"role\": \"admin\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Missing fields",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"missing@example.com\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid login",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{clientEmail}}\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Malformed JSON",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "NoSQL login rejected",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": {\"$ne\": null}, \"password\": \"StrongPass!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile preserved",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/protected/profile",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('JWT identity', () => pm.expect(j.data.user.id).to.eql(pm.collectionVariables.get('clientId')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client cannot create gigs",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": 12550}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create freelancer gig",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": 12550}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('gigId', j.data.gig._id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create second freelancer gig",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherFreelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": 12550}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('otherGigId', j.data.gig._id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Browse listings",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Active listings visible', () => pm.expect(j.data.gigs.some(g => g._id === pm.collectionVariables.get('gigId'))).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Own gigs only",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/gigs/mine",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Owner scoped', () => pm.expect(j.data.gigs.every(g => g.freelancer === pm.collectionVariables.get('freelancerId'))).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read own gig",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/gigs/{{gigId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read another owner gig rejected",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/gigs/{{gigId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherFreelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update another owner gig rejected",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/api/gigs/{{gigId}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherFreelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": 12550}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete another owner gig rejected",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/gigs/{{gigId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherFreelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Malformed ID",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/api/gigs/not-a-uuid",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": 12550}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Script input rejected",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"<script>alert(1)</script>\", \"description\": \"Professional logo package\", \"priceCents\": 12550}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Owner mass assignment rejected",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": 12550, \"freelancer\": \"{{otherFreelancerId}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Decimal cents rejected",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": 10.5}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Negative price rejected",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": -100}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update own gig",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/api/gigs/{{gigId}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Updated logo design\", \"description\": \"Professional logo package\", \"priceCents\": 12550}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Freelancer cannot book",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\": \"{{gigId}}\", \"requestKey\": \"{{requestKey}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Forged booking price rejected",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\": \"{{gigId}}\", \"requestKey\": \"{{requestKey}}\", \"amountCents\": 1}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Confirm booking and transaction",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\": \"{{gigId}}\", \"requestKey\": \"{{requestKey}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Transaction linked and price derived', () => { pm.expect(j.data.transaction.booking).to.eql(j.data.booking._id); pm.expect(j.data.transaction.amountCents).to.eql(12550); pm.expect(j.data.transaction.freelancer).to.eql(pm.collectionVariables.get('freelancerId')); });",
+              "pm.collectionVariables.set('bookingId', j.data.booking._id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Retry does not duplicate",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\": \"{{gigId}}\", \"requestKey\": \"{{requestKey}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Same booking', () => pm.expect(j.data.booking._id).to.eql(pm.collectionVariables.get('bookingId')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reused key for different gig rejected",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\": \"{{otherGigId}}\", \"requestKey\": \"{{requestKey}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client views booking",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/bookings/{{bookingId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Freelancer views booking",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/bookings/{{bookingId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other client cannot read booking",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/bookings/{{bookingId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherClientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other freelancer cannot read booking",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/bookings/{{bookingId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherFreelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other client sees no bookings",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherClientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('No leaked bookings', () => pm.expect(j.data.bookings).to.have.lengthOf(0));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client transactions",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/transactions",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('One transaction', () => pm.expect(j.data.transactions).to.have.lengthOf(1));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other freelancer transactions empty",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/transactions",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherFreelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('No leaked transactions', () => pm.expect(j.data.transactions).to.have.lengthOf(0));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Correct freelancer income",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/income",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('No double counted income', () => { pm.expect(j.data.income.totalCents).to.eql(12550); pm.expect(j.data.income.count).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Other freelancer income zero",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/income",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{otherFreelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('No income leakage', () => pm.expect(j.data.income.totalCents).to.eql(0));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client income denied",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/income",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client admin denied",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/admin/summary",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin login",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{adminEmail}}\", \"password\": \"{{adminPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.collectionVariables.set('adminToken', j.data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin overview",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/admin/summary",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Aggregate overview', () => pm.expect(j.data.summary.transactions).to.be.at.least(1));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin cannot access private client list",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/transactions",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin cannot edit freelancer gig",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/api/gigs/{{gigId}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Logo design\", \"description\": \"Professional logo package\", \"priceCents\": 12550}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete own gig",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/gigs/{{gigId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted gig absent from browsing",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/gigs",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Not available', () => pm.expect(j.data.gigs.some(g => g._id === pm.collectionVariables.get('gigId'))).to.eql(false));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted gig cannot be booked",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gigId\": \"{{gigId}}\", \"requestKey\": \"{{secondKey}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Historical booking survives deletion",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/bookings/{{bookingId}}",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Income survives gig deletion",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/income",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freelancerToken}}"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('History retained', () => pm.expect(j.data.income.totalCents).to.eql(12550));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Safe unknown route",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/route-that-does-not-exist",
+        "header": []
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 1",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 2",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 3",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 4",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 5",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 6",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 7",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 8",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 9",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 10",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 11",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 12",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 13",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login rate attempt 14",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"nobody@example.com\", \"password\": \"Incorrect!123\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 429', () => pm.response.to.have.status(429));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Retry guidance', () => pm.expect(pm.response.headers.has('Retry-After')).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Booking rate attempt 1",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Booking rate attempt 2",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Booking rate attempt 3",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Booking rate attempt 4",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Booking rate attempt 5",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Booking rate attempt 6",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/bookings",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 429', () => pm.response.to.have.status(429));",
+              "const j = pm.response.json();",
+              "pm.test('Safe response', () => { pm.expect(j).not.to.have.property('stack'); pm.expect(pm.response.text()).not.to.include('passwordHash'); });",
+              "pm.test('Retry guidance', () => pm.expect(pm.response.headers.has('Retry-After')).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

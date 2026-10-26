@@ -1,0 +1,42 @@
+{
+  "name": "hustlehub-plus-backend",
+  "version": "3.0.0",
+  "private": true,
+  "description": "HustleHub+ secure marketplace API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build": "node scripts/check-syntax.js",
+    "test": "node scripts/test-api.js && node scripts/test-security.js",
+    "create-admin": "node scripts/create-admin.js",
+    "test:unit": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "bcrypt": "6.0.0",
+    "dotenv": "17.4.2",
+    "express": "5.2.1",
+    "express-rate-limit": "8.7.0",
+    "express-validator": "7.3.2",
+    "helmet": "8.3.0",
+    "jsonwebtoken": "9.0.3",
+    "mongoose": "8.24.4"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "10.4.3",
+    "newman": "6.2.3"
+  },
+  "overrides": {
+    "qs": "6.16.0",
+    "lodash": "4.18.1",
+    "handlebars": "4.7.10",
+    "node-forge": "1.4.0",
+    "flatted": "3.4.4",
+    "underscore": "1.13.8",
+    "jose": "4.15.9",
+    "uuid": "11.1.1"
+  }
+}

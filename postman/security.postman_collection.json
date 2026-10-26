@@ -1,0 +1,503 @@
+{
+  "info": {
+    "name": "HustleHub+ Security",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:3443"
+    }
+  ],
+  "item": [
+    {
+      "name": "Register freelancer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Final Freelancer\", \"email\": \"final-free-{{suffix}}@example.com\", \"password\": \"PartThree!12345\", \"role\": \"freelancer\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('suffix', pm.variables.replaceIn('{{$randomUUID}}'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login freelancer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"final-free-{{suffix}}@example.com\", \"password\": \"PartThree!12345\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));",
+              "pm.environment.set('freeToken', payload.data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Empty annual finance",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freeToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/finance?year=2026"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));",
+              "pm.test('Zero totals and twelve months', () => { pm.expect(payload.data.summary.grossCents).to.eql(0); pm.expect(payload.data.summary.taxCents).to.eql(0); pm.expect(payload.data.months).to.have.length(12); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid year",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freeToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/finance?year=oops"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject owner override",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freeToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/finance?year=2026&freelancer=someone"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Register client",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Final Client\", \"email\": \"final-client-{{suffix}}@example.com\", \"password\": \"PartThree!12345\", \"role\": \"client\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Login client",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"final-client-{{suffix}}@example.com\", \"password\": \"PartThree!12345\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));",
+              "pm.environment.set('clientToken', payload.data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Client cannot read finance",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{clientToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/finance"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Missing token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/finance"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Failed login 1",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"final-client-{{suffix}}@example.com\", \"password\": \"WrongPassword!12345\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Failed login 2",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"final-client-{{suffix}}@example.com\", \"password\": \"WrongPassword!12345\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Failed login 3",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"final-client-{{suffix}}@example.com\", \"password\": \"WrongPassword!12345\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Failed login 4",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"final-client-{{suffix}}@example.com\", \"password\": \"WrongPassword!12345\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Failed login 5",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"final-client-{{suffix}}@example.com\", \"password\": \"WrongPassword!12345\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Correct password refused during lock",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"final-client-{{suffix}}@example.com\", \"password\": \"PartThree!12345\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logout freelancer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freeToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Revoked token cannot access profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{freeToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/protected/profile"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "var payload = pm.response.json();",
+              "pm.test('Safe envelope', () => pm.expect(payload).to.have.property('success'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

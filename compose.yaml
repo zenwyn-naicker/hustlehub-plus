@@ -1,0 +1,87 @@
+name: hustlehubplus
+services:
+  mongo-key:
+    image: mongo:8.0
+    entrypoint: ["bash", "-ec"]
+    command: ["if [ ! -s /keys/keyfile ]; then openssl rand -base64 756 > /keys/keyfile; fi; chown 999:999 /keys/keyfile; chmod 400 /keys/keyfile"]
+    volumes: [mongo-key:/keys]
+    networks: [private]
+  mongo:
+    image: mongo:8.0
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--auth", "--keyFile", "/keys/keyfile"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in .env.compose}
+    volumes:
+      - mongo-data:/data/db
+      - mongo-key:/keys:ro
+    depends_on:
+      mongo-key: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ping:1}).ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks: [private]
+  mongo-init:
+    image: mongo:8.0
+    entrypoint: ["mongosh", "--nodb", "--quiet", "/setup/init-mongo.js"]
+    environment:
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set MONGO_APP_PASSWORD}
+    volumes: [./scripts/init-mongo.js:/setup/init-mongo.js:ro]
+    depends_on:
+      mongo: {condition: service_healthy}
+    networks: [private]
+  tls-init:
+    image: busybox:1.37
+    command: ["sh", "-ec", "cp /source/localhost-key.pem /tls/key.pem; cp /source/localhost-cert.pem /tls/cert.pem; chown 1000:1000 /tls/key.pem /tls/cert.pem; chmod 400 /tls/key.pem; chmod 444 /tls/cert.pem"]
+    volumes:
+      - ./backend/certs:/source:ro
+      - tls:/tls
+    networks: [private]
+  client:
+    build: {context: ., dockerfile: client/Dockerfile}
+    image: hustlehubplus-client:latest
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    networks: [private]
+  api:
+    build: {context: ., dockerfile: backend/Dockerfile}
+    image: hustlehubplus-api:latest
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3443
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      JWT_ISSUER: hustlehub-plus-api
+      JWT_AUDIENCE: hustlehub-plus-client
+      BCRYPT_ROUNDS: 12
+      MONGODB_URI: mongodb://hustlehub:${MONGO_APP_PASSWORD}@mongo:27017/hustlehub?authSource=hustlehub&replicaSet=rs0
+      SSL_KEY_PATH: /run/tls/key.pem
+      SSL_CERT_PATH: /run/tls/cert.pem
+      CONTAINER_FRONTEND: 'true'
+      LOKI_HOST: ${LOKI_HOST:-}
+      LOKI_USERNAME: ${LOKI_USERNAME:-}
+      LOKI_PASSWORD: ${LOKI_PASSWORD:-}
+    ports: ["127.0.0.1:${APP_PORT:-3443}:3443"]
+    volumes: [tls:/run/tls:ro]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    depends_on:
+      mongo-init: {condition: service_completed_successfully}
+      tls-init: {condition: service_completed_successfully}
+      client: {condition: service_healthy}
+    networks: [private, outbound]
+volumes:
+  mongo-data:
+  mongo-key:
+  tls:
+networks:
+  private: {internal: true}
+  outbound:

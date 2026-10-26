@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    env:
+      MONGOMS_VERSION: 7.0.24
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            client/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix client
+
+      - name: Generate test HTTPS certificate
+        run: |
+          mkdir -p backend/certs
+          openssl req -x509 -newkey rsa:2048 -sha256 -nodes \
+            -keyout backend/certs/localhost-key.pem \
+            -out backend/certs/localhost-cert.pem \
+            -days 2 -subj '/CN=localhost' \
+            -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1,IP:::1'
+
+      - name: Build backend
+        run: npm run build --prefix backend
+
+      - name: Build frontend
+        run: npm run build --prefix client
+
+      - name: Test backend
+        run: npm test --prefix backend
+
+      - name: Test frontend
+        run: npm test --prefix client

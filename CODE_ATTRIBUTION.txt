@@ -1,0 +1,157 @@
+/*Group Name: ETC ETC*/
+
+/*Group Members:
+Khayden Chetty
+Rivaan Kawulesar
+Stephane Nsengiyumva
+Zenwyn Naicker
+*/
+
+/*Code Attribution: */
+/**************************************************************************************************************
+ * Author: Grafana Labs
+ * Date: 2026
+ * Title: Loki HTTP API - ingest logs
+ * Type: [Documentation]
+ * Available at: <https://grafana.com/docs/loki/latest/reference/loki-http-api/#ingest-logs> [Accessed 23 October 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: INSY7314-2026-EMDBN
+ * Date: 2026
+ * Title: Activity 17 - Logging and Monitoring with Grafana Cloud and Loki
+ * Type: [Teaching material]
+ * Available at: <https://github.com/INSY7314-2026-EMDBN/Hello-INSY7314/tree/main/17%20-%20Logging%20and%20Monitoring%20with%20Grafana%20Cloud%20and%20Loki> [Accessed 23 October 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Node.js Contributors
+ * Date: 2026
+ * Title: Node.js
+ * Type: [Source Code]
+ * Available at: <https://github.com/nodejs/node> [Accessed 28 August 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Express.js Contributors
+ * Date: 2026
+ * Title: Express
+ * Type: [Source Code]
+ * Available at: <https://github.com/expressjs/express> [Accessed 28 August 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: express-validator Contributors
+ * Date: 2026
+ * Title: express-validator
+ * Type: [Source Code]
+ * Available at: <https://github.com/express-validator/express-validator> [Accessed 28 August 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: kelektiv
+ * Date: 2026
+ * Title: node.bcrypt.js
+ * Type: [Source Code]
+ * Available at: <https://github.com/kelektiv/node.bcrypt.js/> [Accessed 28 August 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Auth0
+ * Date: 2026
+ * Title: node-jsonwebtoken
+ * Type: [Source Code]
+ * Available at: <https://github.com/auth0/node-jsonwebtoken> [Accessed 28 August 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Mot
+ * Date: 2026
+ * Title: dotenv
+ * Type: [Source Code]
+ * Available at: <https://github.com/motdotla/dotenv> [Accessed 28 August 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Postman
+ * Date: 2026
+ * Title: Postman Sandbox
+ * Type: [Source Code]
+ * Available at: <https://github.com/postmanlabs/postman-sandbox> [Accessed 28 August 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Mongoose Contributors
+ * Date: 2026
+ * Title: Mongoose
+ * Type: [Source Code]
+ * Available at: <https://github.com/Automattic/mongoose> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: React Contributors
+ * Date: 2026
+ * Title: React and React DOM
+ * Type: [Source Code]
+ * Available at: <https://github.com/react/react> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Helmet Contributors
+ * Date: 2026
+ * Title: Helmet
+ * Type: [Source Code]
+ * Available at: <https://github.com/helmetjs/helmet> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: express-rate-limit Contributors
+ * Date: 2026
+ * Title: express-rate-limit
+ * Type: [Source Code]
+ * Available at: <https://github.com/express-rate-limit/express-rate-limit> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Postman
+ * Date: 2026
+ * Title: Newman
+ * Type: [Source Code]
+ * Available at: <https://github.com/postmanlabs/newman> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: mongodb-memory-server Contributors
+ * Date: 2026
+ * Title: mongodb-memory-server
+ * Type: [Source Code]
+ * Available at: <https://github.com/typegoose/mongodb-memory-server> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Vite Contributors
+ * Date: 2026
+ * Title: Vite
+ * Type: [Source Code]
+ * Available at: <https://github.com/vitejs/vite> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Vitest Contributors
+ * Date: 2026
+ * Title: Vitest
+ * Type: [Source Code]
+ * Available at: <https://github.com/vitest-dev/vitest> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Testing Library Contributors
+ * Date: 2026
+ * Title: React Testing Library
+ * Type: [Source Code]
+ * Available at: <https://github.com/testing-library/react-testing-library> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Testing Library Contributors
+ * Date: 2026
+ * Title: user-event
+ * Type: [Source Code]
+ * Available at: <https://github.com/testing-library/user-event> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: Testing Library Contributors
+ * Date: 2026
+ * Title: jest-dom
+ * Type: [Source Code]
+ * Available at: <https://github.com/testing-library/jest-dom> [Accessed 15 September 2026]
+ **************************************************************************************************************/
+/**************************************************************************************************************
+ * Author: jsdom Contributors
+ * Date: 2026
+ * Title: jsdom
+ * Type: [Source Code]
+ * Available at: <https://github.com/jsdom/jsdom> [Accessed 15 September 2026]
+ **************************************************************************************************************/

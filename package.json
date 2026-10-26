@@ -1,0 +1,18 @@
+{
+  "name": "hustlehub-plus-quality",
+  "version": "3.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "lint": "eslint backend/src backend/scripts backend/server.js backend/test client/src client/vite.config.js scripts --max-warnings 0",
+    "test:stack": "node scripts/test-stack.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.10.0",
+    "eslint-plugin-security": "4.0.1",
+    "globals": "16.5.0"
+  }
+}
